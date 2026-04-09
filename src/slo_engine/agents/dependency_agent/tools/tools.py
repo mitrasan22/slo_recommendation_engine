@@ -15,7 +15,6 @@ Algorithms used:
 from __future__ import annotations
 
 import json
-import math
 from typing import Any
 
 import networkx as nx
@@ -26,7 +25,6 @@ from slo_engine.agents.dependency_agent.tools.schema import (
     GraphAnalysisOutput,
     ImpactAnalysisInput,
     ImpactAnalysisOutput,
-    IngestDependenciesInput,
 )
 from slo_engine.config.settings import settings
 
@@ -37,7 +35,10 @@ _PR_TOL  = float(settings.compute_logic.pagerank_tol)
 _PR_ITER = int(settings.compute_logic.pagerank_max_iter)
 
 
-def ingest_service_dependencies(services_json: str = "", services: list = None) -> str:
+def ingest_service_dependencies(
+    services_json: str = "",
+    services: list[Any] | None = None,
+) -> str:
     """
     Parse and store a service dependency graph from a JSON payload.
 
@@ -103,9 +104,9 @@ def ingest_service_dependencies(services_json: str = "", services: list = None) 
 
 def analyse_dependency_graph(
     analysis_input_json: str = "{}",
-    service_name: str = None,
+    service_name: str | None = None,
     include_transitive: bool = True,
-    latency_map: dict = None,
+    latency_map: dict[str, float] | None = None,
 ) -> str:
     """
     Run PageRank, Tarjan SCC, DAG longest-path, and betweenness centrality.
@@ -148,9 +149,9 @@ def analyse_dependency_graph(
                 latency_map=latency_map,
             )
         G: nx.DiGraph = _graph_cache.get("graph", nx.DiGraph())
-        latency_map: dict[str, float] = _graph_cache.get("latency_map", {})
+        merged_latency_map: dict[str, float] = _graph_cache.get("latency_map", {})
         if inp.latency_map:
-            latency_map = {**latency_map, **inp.latency_map}
+            merged_latency_map = {**merged_latency_map, **inp.latency_map}
 
         if G.number_of_nodes() == 0:
             return json.dumps({"status": "error", "message": "No graph ingested yet."})
@@ -183,14 +184,14 @@ def analyse_dependency_graph(
 
         critical_path: list[str] = []
         critical_latency = 0.0
-        if dag_valid and latency_map:
+        if dag_valid and merged_latency_map:
             try:
                 topo = list(nx.topological_sort(G))
-                dist = {n: latency_map.get(n, 0.0) for n in nodes}
+                dist = {n: merged_latency_map.get(n, 0.0) for n in nodes}
                 pred: dict[str, str | None] = {n: None for n in nodes}
                 for u in topo:
                     for v in G.successors(u):
-                        candidate = dist[u] + latency_map.get(v, 0.0)
+                        candidate = dist[u] + merged_latency_map.get(v, 0.0)
                         if candidate > dist[v]:
                             dist[v] = candidate
                             pred[v] = u

@@ -201,6 +201,7 @@ class RateLimitMiddleware:
         """
         try:
             import redis as _redis
+
             from slo_engine.config import config as _cfg
             redis_url = getattr(getattr(_cfg, "redis", None), "url", None) or "redis://localhost:6379/0"
             client = _redis.from_url(redis_url, socket_connect_timeout=1)

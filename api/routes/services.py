@@ -10,7 +10,6 @@ and runs graph analysis via the dependency agent tools.
 """
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -18,7 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from slo_engine.db.database import get_db
-from slo_engine.db.models import Service, ServiceDependency, ServiceTier, DependencyType
+from slo_engine.db.models import DependencyType, Service, ServiceDependency, ServiceTier
 
 router = APIRouter()
 
@@ -208,12 +207,13 @@ async def ingest_dependencies(
     INSERT-or-UPDATE semantics via primary key matching.
     """
     import json as _json
-    from slo_engine.agents.dependency_agent.tools.tools import (
-        ingest_service_dependencies,
-        analyse_dependency_graph,
-    )
 
     from sqlalchemy import select as _select
+
+    from slo_engine.agents.dependency_agent.tools.tools import (
+        analyse_dependency_graph,
+        ingest_service_dependencies,
+    )
     for svc_in in payload.services:
         result = await db.execute(_select(Service).where(Service.name == svc_in.service))
         existing = result.scalar_one_or_none()

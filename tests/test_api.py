@@ -11,20 +11,19 @@ Uses Starlette's TestClient for ASGI-level testing — no network required.
 from __future__ import annotations
 
 import json
+import os
 import re
+import sys
 
-import pytest
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse, Response
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-import sys
-import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "api"))
 
-from main import TraceContextMiddleware, SseHeadersMiddleware  # noqa: E402
+from main import SseHeadersMiddleware, TraceContextMiddleware  # noqa: E402
 
 _TRACEPARENT_RE = re.compile(
     r"^00-[0-9a-f]{32}-[0-9a-f]{16}-01$"
@@ -284,8 +283,9 @@ class TestRfc7807ErrorFormat:
         return Request(scope)
 
     def test_global_error_handler_returns_500(self):
-        from main import _global_error_handler
         import asyncio
+
+        from main import _global_error_handler
         req  = self._make_mock_request(trace_id="deadbeef" * 4)
         resp = asyncio.run(
             _global_error_handler(req, RuntimeError("boom"))
@@ -293,8 +293,9 @@ class TestRfc7807ErrorFormat:
         assert resp.status_code == 500
 
     def test_global_error_handler_content_type_is_problem_json(self):
-        from main import _global_error_handler
         import asyncio
+
+        from main import _global_error_handler
         req  = self._make_mock_request()
         resp = asyncio.run(
             _global_error_handler(req, RuntimeError("boom"))
@@ -302,8 +303,9 @@ class TestRfc7807ErrorFormat:
         assert "application/problem+json" in resp.media_type
 
     def test_global_error_handler_body_has_required_fields(self):
-        from main import _global_error_handler
         import asyncio
+
+        from main import _global_error_handler
         req  = self._make_mock_request(trace_id="a" * 32)
         resp = asyncio.run(
             _global_error_handler(req, RuntimeError("test error"))
@@ -313,8 +315,9 @@ class TestRfc7807ErrorFormat:
             assert field in body, f"RFC 7807 body missing field: {field}"
 
     def test_global_error_handler_uses_trace_id_from_scope(self):
-        from main import _global_error_handler
         import asyncio
+
+        from main import _global_error_handler
         trace = "a" * 32
         req   = self._make_mock_request(trace_id=trace)
         resp  = asyncio.run(
@@ -332,8 +335,9 @@ class TestRfc7807ErrorFormat:
         The ``correlation_id`` field was replaced by ``trace_id`` to align
         with W3C Trace Context. Its presence would indicate a regression.
         """
-        from main import _global_error_handler
         import asyncio
+
+        from main import _global_error_handler
         req  = self._make_mock_request()
         resp = asyncio.run(
             _global_error_handler(req, RuntimeError("x"))

@@ -9,10 +9,9 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_API: ghcr.io/${{ github.repository }}/slo-api
-  IMAGE_UI:  ghcr.io/${{ github.repository }}/slo-ui
+  IMAGE_UI: ghcr.io/${{ github.repository }}/slo-ui
 
 jobs:
-  # ── Lint & Test ────────────────────────────────────────────────────────────
   test:
     name: Lint & Test
     runs-on: ubuntu-latest
@@ -55,7 +54,6 @@ jobs:
 
       - name: Type check (mypy)
         run: python -m mypy src/slo_engine/ --ignore-missing-imports --no-error-summary
-        continue-on-error: true   # informational — does not block merge
 
       - name: Run tests
         env:
@@ -64,7 +62,6 @@ jobs:
           ENVIRONMENT: test
         run: python -m pytest tests/ -v --tb=short -q
 
-  # ── Build & Push Docker images ─────────────────────────────────────────────
   build:
     name: Build & Push Images
     runs-on: ubuntu-latest
@@ -129,7 +126,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── Deploy to Kubernetes ───────────────────────────────────────────────────
   deploy:
     name: Deploy to Kubernetes
     runs-on: ubuntu-latest
@@ -161,7 +157,7 @@ jobs:
       - name: Wait for rollout
         run: |
           kubectl rollout status deployment/slo-api -n slo-engine --timeout=300s
-          kubectl rollout status deployment/slo-ui  -n slo-engine --timeout=120s
+          kubectl rollout status deployment/slo-ui -n slo-engine --timeout=120s
 
       - name: Smoke test
         run: |

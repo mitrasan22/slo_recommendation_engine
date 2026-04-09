@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 logger = logger.bind(name=__name__)
 
-_registry: dict[str, "ADKAgentType"] = {}
+_registry: dict[str, ADKAgentType] = {}
 
 
 class AgentRegistry:
@@ -35,7 +35,7 @@ class AgentRegistry:
     """
 
     @classmethod
-    def register(cls, name: str, agent: "ADKAgentType") -> None:
+    def register(cls, name: str, agent: ADKAgentType) -> None:
         """
         Register an ADK agent under the given name.
 
@@ -61,7 +61,7 @@ class AgentRegistry:
         logger.debug("AgentRegistry: registered '{}'.", name)
 
     @classmethod
-    def get(cls, name: str) -> "ADKAgentType | None":
+    def get(cls, name: str) -> ADKAgentType | None:
         """
         Retrieve a registered agent by name.
 
@@ -83,7 +83,7 @@ class AgentRegistry:
         return _registry.get(name)
 
     @classmethod
-    def all(cls) -> dict[str, "ADKAgentType"]:
+    def all(cls) -> dict[str, ADKAgentType]:
         """
         Return a shallow copy of all registered agents.
 

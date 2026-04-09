@@ -14,7 +14,6 @@ scipy have not yet JIT-compiled their critical paths.
 import math
 
 import numpy as np
-import pytest
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 

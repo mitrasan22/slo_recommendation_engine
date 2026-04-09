@@ -26,7 +26,10 @@ slo-engine = "api.main:main"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP"]
+ignore = ["E402", "E501", "E701", "E741", "N803", "N806", "UP040", "UP042", "UP047"]
 
 [tool.mypy]
 python_version = "3.12"

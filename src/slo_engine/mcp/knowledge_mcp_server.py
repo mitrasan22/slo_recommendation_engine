@@ -19,9 +19,9 @@ import logging
 from collections import Counter
 
 from mcp.server import Server
+from mcp.server.lowlevel.server import NotificationOptions
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
-from mcp.server.lowlevel.server import NotificationOptions
 from mcp.types import CallToolResult, ListToolsRequest, ListToolsResult, TextContent, Tool
 
 from slo_engine.rag.knowledge_store import knowledge_store

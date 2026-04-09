@@ -10,6 +10,7 @@ adapters fall back to the mock implementation when unavailable or misconfigured.
 from __future__ import annotations
 
 import random
+from datetime import UTC
 
 import httpx
 from loguru import logger
@@ -300,5 +301,5 @@ def _now_ts() -> int:
     -----
     Used to compute Prometheus and Datadog query time ranges.
     """
-    from datetime import datetime, timezone
-    return int(datetime.now(tz=timezone.utc).timestamp())
+    from datetime import datetime
+    return int(datetime.now(tz=UTC).timestamp())

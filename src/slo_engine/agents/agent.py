@@ -15,7 +15,8 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from typing import AsyncGenerator, Literal
+from collections.abc import AsyncGenerator
+from typing import Literal
 
 from google.adk.agents import SequentialAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -26,15 +27,14 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from slo_engine.agents.base import BaseAgent
-from slo_engine.agents.prompt import router_decision_prompt, router_prompt
 from slo_engine.agents.dependency_agent.agent import dependency_agent
 from slo_engine.agents.dependency_agent.schema import (
     DEP_ANALYSIS_OUTPUT_KEY,
     DEP_CYCLES_OUTPUT_KEY,
-    DEP_REPORT_OUTPUT_KEY,
-    DEP_WORKFLOW_STEP_KEY,
-    DEP_USER_ANSWERS_KEY,
     DEP_PENDING_QUESTIONS_KEY,
+    DEP_REPORT_OUTPUT_KEY,
+    DEP_USER_ANSWERS_KEY,
+    DEP_WORKFLOW_STEP_KEY,
     GRAPH_PAYLOAD_KEY,
     TARGET_SUBGRAPH_KEY,
     DependencyWorkflowStep,
@@ -43,35 +43,36 @@ from slo_engine.agents.metrics_agent.agent import metrics_agent
 from slo_engine.agents.metrics_agent.schema import (
     METRICS_ANOMALY_KEY,
     METRICS_BUDGET_KEY,
+    METRICS_PENDING_QUESTIONS_KEY,
+    METRICS_QUERY_KEY,
     METRICS_REPORT_KEY,
     METRICS_SERVICE_KEY,
+    METRICS_SLO_TARGET_KEY,
+    METRICS_USER_ANSWERS_KEY,
     METRICS_WINDOW_KEY,
     METRICS_WORKFLOW_KEY,
-    METRICS_SLO_TARGET_KEY,
-    METRICS_QUERY_KEY,
-    METRICS_USER_ANSWERS_KEY,
-    METRICS_PENDING_QUESTIONS_KEY,
     MetricsWorkflowStep,
 )
+from slo_engine.agents.prompt import router_decision_prompt, router_prompt
 from slo_engine.agents.recommendation_agent.agent import recommendation_agent
 from slo_engine.agents.recommendation_agent.schema import (
+    REC_DEP_SLOS_KEY,
+    REC_FEASIBILITY_KEY,
+    REC_GENERATION_KEY,
+    REC_HIST_AVAIL_KEY,
+    REC_KNOWLEDGE_KEY,
+    REC_OPTIMIZER_KEY,
+    REC_PENDING_QUESTIONS_KEY,
     REC_REPORT_KEY,
     REC_SERVICE_KEY,
     REC_SERVICES_LIST_KEY,
-    REC_WORKFLOW_KEY,
-    REC_DEP_SLOS_KEY,
-    REC_HIST_AVAIL_KEY,
-    REC_WEIGHTS_KEY,
-    REC_GENERATION_KEY,
-    REC_KNOWLEDGE_KEY,
-    REC_FEASIBILITY_KEY,
-    REC_OPTIMIZER_KEY,
     REC_USER_ANSWERS_KEY,
-    REC_PENDING_QUESTIONS_KEY,
+    REC_WEIGHTS_KEY,
+    REC_WORKFLOW_KEY,
     RecWorkflowStep,
 )
-from slo_engine.review_store import ReviewRequest, submit_for_human_review
 from slo_engine.integrations.webhook_sink import push_slo_result_sync
+from slo_engine.review_store import submit_for_human_review
 
 logger = logger.bind(name=__name__)
 
@@ -531,6 +532,7 @@ class SLORouterAgent(BaseAgent):
                      for s in graph_payload if isinstance(s, dict)),
                     "unknown",
                 )
+            target_svc = target_svc or "unknown"
             if not graph_services:
                 graph_services = [target_svc]
 

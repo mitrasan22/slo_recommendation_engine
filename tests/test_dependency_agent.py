@@ -11,8 +11,6 @@ test by the ``reset_graph_cache`` autouse fixture in ``conftest.py``.
 """
 import json
 
-import pytest
-
 from slo_engine.agents.dependency_agent.tools.tools import (
     analyse_dependency_graph,
     detect_circular_dependencies,

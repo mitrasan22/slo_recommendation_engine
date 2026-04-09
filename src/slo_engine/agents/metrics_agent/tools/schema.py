@@ -7,6 +7,7 @@ Defines input and output validation schemas used by the service metrics query,
 anomaly detection, and error budget computation tools.
 """
 from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 

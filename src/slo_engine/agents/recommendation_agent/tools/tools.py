@@ -25,7 +25,6 @@ from typing import ClassVar
 
 import numpy as np
 import pulp
-from scipy import stats
 
 from slo_engine.agents.recommendation_agent.tools.schema import (
     FeasibilityCheckInput,
@@ -653,7 +652,7 @@ def retrieve_knowledge_for_slo(
         drift        = _to_bool(inp.get("drift_detected", False))
         anomaly      = inp.get("anomaly_severity", "none")
         has_ext_deps = _to_bool(inp.get("has_external_deps", False))
-        top_k        = _to_int(inp.get("top_k", 4))
+        parsed_top_k = _to_int(inp.get("top_k", 4))
 
         query_parts = [service_name, service_type, "slo recommendation", tier]
         if drift:
@@ -664,7 +663,7 @@ def retrieve_knowledge_for_slo(
             query_parts.append("external dependency circuit breaker reliability")
         query = " ".join(query_parts)
 
-        results = knowledge_store.retrieve(query, top_k=top_k)
+        results = knowledge_store.retrieve(query, top_k=parsed_top_k)
 
         context_lines = []
         for r in results:

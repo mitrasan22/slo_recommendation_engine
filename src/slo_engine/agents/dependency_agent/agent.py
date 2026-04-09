@@ -14,7 +14,8 @@ with answers stored in state.
 from __future__ import annotations
 
 import json
-from typing import AsyncGenerator, Optional, Type, TypeVar
+from collections.abc import AsyncGenerator
+from typing import TypeVar
 
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event, EventActions
@@ -41,10 +42,7 @@ from slo_engine.agents.dependency_agent.schema import (
     DEP_WORKFLOW_STEP_KEY,
     GRAPH_PAYLOAD_KEY,
     TARGET_SUBGRAPH_KEY,
-    DependencyAnalysisSchema,
-    DependencyCycleSchema,
     DependencyPlannerSchema,
-    DependencyReportSchema,
     DependencyWorkflowStep,
     PlannerQuestion,
 )
@@ -59,7 +57,7 @@ logger = logger.bind(name=__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
-def _parse_output(raw, schema: Type[T]) -> Optional[T]:
+def _parse_output(raw, schema: type[T]) -> T | None:
     """
     Parse raw LLM output into a Pydantic schema instance.
 
@@ -176,7 +174,6 @@ def _generate_fallback_questions(subgraph: list[dict]) -> list[PlannerQuestion]:
     for svc in subgraph:
         if not isinstance(svc, dict):
             continue
-        svc_name = svc.get("service", svc.get("service_name", ""))
         for dep in svc.get("depends_on", []):
             if not isinstance(dep, dict):
                 continue

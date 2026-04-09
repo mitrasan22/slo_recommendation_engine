@@ -10,7 +10,7 @@ orchestrator agents.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Literal, Optional
+from typing import Literal
 
 from google.adk.agents.base_agent import BaseAgentState
 from pydantic import BaseModel, Field
@@ -307,9 +307,9 @@ class MetricsOrchestratorState(BaseAgentState):
     """
 
     workflow_step: MetricsWorkflowStep = MetricsWorkflowStep.QUERY
-    query_output: Optional[MetricsQueryAgentSchema] = None
-    anomaly_output: Optional[MetricsAnomalyAgentSchema] = None
-    budget_output: Optional[MetricsBudgetAgentSchema] = None
-    report_output: Optional[MetricsReportSchema] = None
+    query_output: MetricsQueryAgentSchema | None = None
+    anomaly_output: MetricsAnomalyAgentSchema | None = None
+    budget_output: MetricsBudgetAgentSchema | None = None
+    report_output: MetricsReportSchema | None = None
     pending_questions: list[MetricsPlannerQuestion] = []
     user_answers: str = ""

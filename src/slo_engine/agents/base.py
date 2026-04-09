@@ -11,7 +11,8 @@ type. The build() method constructs the appropriate ADK agent instance.
 from __future__ import annotations
 
 import inspect
-from typing import Any, AsyncGenerator, Literal, Sequence, TypeAlias, TypeVar, cast
+from collections.abc import AsyncGenerator, Sequence
+from typing import Any, Literal, TypeAlias, TypeVar, cast
 
 from dotenv import load_dotenv
 from google.adk.agents import Agent, LoopAgent, ParallelAgent, SequentialAgent
@@ -193,7 +194,7 @@ ADKAgentType = Agent | SequentialAgent | ParallelAgent | LoopAgent
 RunAsyncOverride = Any
 
 _WARNED_UNSUPPORTED_AGENT_KWARGS: set[str] = set()
-_WARNED_RUN_OVERRIDE_CONFLICT: set[type["BaseAgent"]] = set()
+_WARNED_RUN_OVERRIDE_CONFLICT: set[type[BaseAgent]] = set()
 _WARNED_JSON_SCHEMA_OVERRIDES: set[str] = set()
 
 
@@ -436,7 +437,7 @@ class BaseAgent:
         """
         return cls.create(orchestration="loop", **overrides)
 
-    def resolve_model(self) -> BaseLlm | None:
+    def resolve_model(self) -> BaseLlm | str | None:
         """
         Resolve the configured model string or instance to an ADK BaseLlm.
 
@@ -966,7 +967,7 @@ class BaseAgent:
         return selected_override
 
     @staticmethod
-    def _warn_run_override_conflict_once(agent_cls: type["BaseAgent"]) -> None:
+    def _warn_run_override_conflict_once(agent_cls: type[BaseAgent]) -> None:
         """
         Emit a one-time warning when both run override methods are defined.
 

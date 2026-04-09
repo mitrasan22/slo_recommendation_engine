@@ -25,7 +25,7 @@ import pathlib
 import time
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from slo_engine.config import config as _config
 from slo_engine.utils.pii_scrubber import scrub as _scrub

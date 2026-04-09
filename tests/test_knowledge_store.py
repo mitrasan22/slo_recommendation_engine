@@ -18,8 +18,6 @@ Covers:
 """
 from __future__ import annotations
 
-import pytest
-
 from slo_engine.rag.knowledge_store import (
     KnowledgeStore,
     _infer_mmr_lambda,

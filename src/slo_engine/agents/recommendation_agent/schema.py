@@ -10,7 +10,7 @@ orchestrator agents.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from google.adk.agents.base_agent import BaseAgentState
 from pydantic import BaseModel, Field
@@ -238,9 +238,9 @@ class RecOrchestratorState(BaseAgentState):
     """
 
     workflow_step: RecWorkflowStep = RecWorkflowStep.GENERATE
-    generation_output: Optional[dict] = None
-    feasibility_output: Optional[dict] = None
-    optimizer_output: Optional[dict] = None
-    report_output: Optional[SLORecommendationReport] = None
+    generation_output: dict | None = None
+    feasibility_output: dict | None = None
+    optimizer_output: dict | None = None
+    report_output: SLORecommendationReport | None = None
     pending_questions: list[RecPlannerQuestion] = []
     user_answers: str = ""

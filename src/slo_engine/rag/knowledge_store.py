@@ -47,6 +47,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import Any, cast
 
 import chromadb
 import numpy as np
@@ -310,7 +311,7 @@ class KnowledgeStore:
         """
         collection = self._client.get_or_create_collection(
             name=name,
-            embedding_function=self._embed_fn,
+            embedding_function=cast(Any, self._embed_fn),
             metadata={"hnsw:space": "cosine"},
         )
 
@@ -324,7 +325,7 @@ class KnowledgeStore:
 
         collection = self._client.create_collection(
             name=name,
-            embedding_function=self._embed_fn,
+            embedding_function=cast(Any, self._embed_fn),
             metadata={"hnsw:space": "cosine"},
         )
         self._index_documents(collection)
@@ -352,9 +353,9 @@ class KnowledgeStore:
         Metadata stored per document: ``type``, ``title``, and ``tags``
         (space-joined for ChromaDB compatibility).
         """
-        _BATCH = 100
-        for start in range(0, len(self._docs), _BATCH):
-            batch = self._docs[start : start + _BATCH]
+        batch_size = 100
+        for start in range(0, len(self._docs), batch_size):
+            batch = self._docs[start : start + batch_size]
             collection.upsert(
                 ids=[d["id"] for d in batch],
                 documents=[
@@ -446,7 +447,7 @@ class KnowledgeStore:
             return []
 
         n_candidates = min(top_k * 10, total)
-        where        = {"type": doc_type} if doc_type != "all" else None
+        where = cast(Any, {"type": doc_type} if doc_type != "all" else None)
 
         try:
             results = self._collection.query(
@@ -466,10 +467,11 @@ class KnowledgeStore:
             except Exception:
                 return []
 
-        ids        = results["ids"][0]
-        metadatas  = results["metadatas"][0]
-        distances  = results["distances"][0]
-        embeddings = results["embeddings"][0]
+        result_map = cast(dict[str, Any], results)
+        ids = cast(list[str], result_map["ids"][0])
+        metadatas = cast(list[dict[str, Any]], result_map["metadatas"][0])
+        distances = cast(list[float], result_map["distances"][0])
+        embeddings = cast(list[list[float]], result_map["embeddings"][0])
 
         if not ids:
             return []

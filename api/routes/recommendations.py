@@ -17,15 +17,15 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from slo_engine.agents.dependency_agent.tools.tools import (
-    ingest_service_dependencies,
     analyse_dependency_graph,
+    ingest_service_dependencies,
 )
 from slo_engine.agents.metrics_agent.tools.tools import query_service_metrics
 from slo_engine.agents.recommendation_agent.tools.tools import (
-    generate_slo_recommendation,
     check_slo_feasibility,
-    run_milp_optimization,
+    generate_slo_recommendation,
     retrieve_knowledge_for_slo,
+    run_milp_optimization,
 )
 
 router = APIRouter()
@@ -273,9 +273,9 @@ async def impact_analysis(body: ImpactAnalysisBody) -> dict:
     model.
     """
     import json as _json
+
     from slo_engine.agents.dependency_agent.tools.tools import _graph_cache
     from slo_engine.agents.metrics_agent.tools.tools import query_service_metrics
-    from slo_engine.agents.recommendation_agent.tools.tools import check_slo_feasibility
 
     metrics_raw = query_service_metrics(_json.dumps({
         "service_name": body.service_name,
@@ -284,7 +284,6 @@ async def impact_analysis(body: ImpactAnalysisBody) -> dict:
     metrics = _json.loads(metrics_raw)
     historical_avail = metrics.get("posterior_mean", 0.99)
 
-    graph = _graph_cache.get("graph", {})
     edges = _graph_cache.get("edges", [])
     sync_dep_names = [
         t for (s, t, _) in edges

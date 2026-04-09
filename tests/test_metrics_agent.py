@@ -11,8 +11,6 @@ how ADK agents invoke them) to test the full input/output contract.
 """
 import json
 
-import pytest
-
 from slo_engine.agents.metrics_agent.tools.tools import (
     compute_error_budget_status,
     detect_metric_anomaly,

@@ -31,12 +31,12 @@ Switching backends: set LLM_MODEL env var or change llm.model in settings.toml.
 from __future__ import annotations
 
 import os
+from typing import override
 
 import litellm
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.models.registry import LLMRegistry
 from loguru import logger
-from typing_extensions import override
 
 logger = logger.bind(name=__name__)
 litellm.modify_params = True

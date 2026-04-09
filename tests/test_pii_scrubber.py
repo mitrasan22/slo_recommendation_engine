@@ -11,8 +11,6 @@ and ordering guarantees (token before UUID).
 """
 from __future__ import annotations
 
-import pytest
-
 from slo_engine.utils.pii_scrubber import scrub, scrub_dict
 
 

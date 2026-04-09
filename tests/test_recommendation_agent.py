@@ -13,8 +13,6 @@ full input/output contract as invoked by ADK agents.
 import json
 import math
 
-import pytest
-
 from slo_engine.agents.recommendation_agent.tools.tools import (
     _confidence_scorer,
     _floor_nines,

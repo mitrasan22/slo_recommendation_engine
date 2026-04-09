@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -89,7 +89,7 @@ class PipelineTracer:
         self._inputs = inputs
         self._trace = None
         self._steps: list[dict] = []
-        self._started_at = datetime.now(timezone.utc)
+        self._started_at = datetime.now(UTC)
 
     def _start(self):
         """
@@ -186,15 +186,6 @@ class PipelineTracer:
         ``"auto_approved"`` decisions and ``0.5`` for all others, enabling
         dashboard filtering by outcome quality.
         """
-        payload = {
-            "service_name": service_name,
-            "availability": recommendation.get("availability"),
-            "latency_p99_ms": recommendation.get("latency_p99_ms"),
-            "confidence_score": recommendation.get("confidence_score"),
-            "sources_cited": sources,
-            "decision": decision,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
         logger.info(
             "AUDIT | service={} avail={} conf={:.2f} sources={} decision={}",
             service_name,
@@ -310,7 +301,7 @@ def log_recommendation_audit(
         recommendation.get("confidence_score", 0),
         sources,
         decision,
-        datetime.now(timezone.utc).isoformat(),
+        datetime.now(UTC).isoformat(),
     )
     if _OPIK_ENABLED and opik:
         try:

@@ -15,6 +15,7 @@ import contextlib
 import json
 import os
 import sys
+from typing import Any, cast
 
 from dotenv import load_dotenv
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
@@ -64,7 +65,7 @@ class KnowledgeMCPClient:
         self._exit_stack = stack
         self._session = session
 
-    async def call_tool(self, tool_name: str, arguments: dict) -> dict:
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         async with self._lock:
             if self._session is None:
                 await self._connect()
@@ -74,7 +75,7 @@ class KnowledgeMCPClient:
                 assert self._session is not None
                 result = await self._session.call_tool(tool_name, arguments=arguments)
                 if getattr(result, "structuredContent", None):
-                    return result.structuredContent
+                    return cast(dict[str, Any], result.structuredContent)
                 parts = []
                 for item in (result.content or []):
                     text = getattr(item, "text", None)
@@ -110,7 +111,12 @@ class KnowledgeMCPClient:
                     await self._connect()
         return {}
 
-    async def retrieve_knowledge(self, query: str, top_k: int = 4, doc_type: str = "all") -> dict:
+    async def retrieve_knowledge(
+        self,
+        query: str,
+        top_k: int = 4,
+        doc_type: str = "all",
+    ) -> dict[str, Any]:
         return await self.call_tool(
             "retrieve_knowledge",
             {"query": query, "top_k": top_k, "doc_type": doc_type},

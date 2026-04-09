@@ -9,9 +9,7 @@ config directory. Environment is selected via the ``SLO_ENV`` variable.
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import Dict, List, Union
 
 from dotenv import load_dotenv
 from dynaconf import Dynaconf
@@ -98,7 +96,7 @@ class Config(Dynaconf):
         self.ROOT_DIR: Path = ROOT_DIR
         self.__kwargs = kwargs
 
-    def __getattr__(self, name: str) -> Union["Config", List, Dict, str]:
+    def __getattr__(self, name: str) -> Config | list | dict | str:
         """
         Proxy attribute access to the Dynaconf parent.
 

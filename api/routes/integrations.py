@@ -22,7 +22,6 @@ from slo_engine.integrations.catalog_adapter import (
 )
 from slo_engine.integrations.webhook_sink import (
     get_registered_webhooks,
-    push_slo_result,
     register_webhook,
 )
 

@@ -12,7 +12,7 @@ orchestrator.
 from __future__ import annotations
 
 import json
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event, EventActions
@@ -40,7 +40,6 @@ from slo_engine.agents.recommendation_agent.schema import (
     REC_WORKFLOW_KEY,
     RecPlannerQuestion,
     RecWorkflowStep,
-    SLORecommendationReport,
 )
 from slo_engine.agents.recommendation_agent.tools.tools import (
     check_slo_feasibility,

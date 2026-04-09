@@ -11,7 +11,8 @@ no extra orchestration wrapper is needed here.
 from __future__ import annotations
 
 import json
-from typing import AsyncGenerator, Optional, Type, TypeVar
+from collections.abc import AsyncGenerator
+from typing import TypeVar
 
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event, EventActions
@@ -57,7 +58,7 @@ logger = logger.bind(name=__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
-def _parse_state(raw: str | dict | None, schema: Type[T]) -> Optional[T]:
+def _parse_state(raw: str | dict | None, schema: type[T]) -> T | None:
     """
     Parse a raw state value into a Pydantic schema instance.
 

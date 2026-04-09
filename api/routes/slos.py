@@ -9,16 +9,13 @@ produced by the agent pipeline.
 """
 from __future__ import annotations
 
-import uuid
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from slo_engine.db.database import get_db
-from slo_engine.db.models import SLO, SLOStatus, Service
+from slo_engine.db.models import SLO, Service, SLOStatus
 
 router = APIRouter()
 

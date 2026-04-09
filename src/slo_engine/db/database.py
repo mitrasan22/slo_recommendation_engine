@@ -9,8 +9,8 @@ for caching and HITL pub/sub signalling.
 """
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import (

@@ -75,6 +75,7 @@ def _log_fmt(record: dict) -> str:
 
 
 import datetime as _dt
+
 _run_log = _LOG_DIR / f"run_{_dt.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
 
 _root_logger.add(
@@ -96,6 +97,7 @@ app: FastAPI = get_fast_api_app(
 )
 
 from api.middleware.rate_limit import RateLimitMiddleware
+
 app.add_middleware(RateLimitMiddleware, limit=60)
 
 app.add_middleware(
@@ -475,7 +477,8 @@ except ImportError as exc:
     logger.warning("Some API routes not available: {}", exc)
 
 try:
-    from api.routes.integrations import agent_card_router, router as integrations_router
+    from api.routes.integrations import agent_card_router
+    from api.routes.integrations import router as integrations_router
 
     app.include_router(integrations_router, prefix="/api/v1", tags=["integrations"])
     app.include_router(agent_card_router)

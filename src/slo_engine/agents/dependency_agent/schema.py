@@ -10,7 +10,7 @@ orchestrator agents.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Literal, Optional
+from typing import Literal
 
 from google.adk.agents.base_agent import BaseAgentState
 from pydantic import BaseModel, Field
@@ -266,9 +266,9 @@ class DependencyOrchestratorState(BaseAgentState):
     """
 
     workflow_step: DependencyWorkflowStep = DependencyWorkflowStep.PLAN
-    plan_output: Optional[DependencyPlannerSchema] = None
-    analysis_output: Optional[DependencyAnalysisSchema] = None
-    cycles_output: Optional[DependencyCycleSchema] = None
-    report_output: Optional[DependencyReportSchema] = None
+    plan_output: DependencyPlannerSchema | None = None
+    analysis_output: DependencyAnalysisSchema | None = None
+    cycles_output: DependencyCycleSchema | None = None
+    report_output: DependencyReportSchema | None = None
     pending_questions: list[PlannerQuestion] = []
     user_answers: str = ""
