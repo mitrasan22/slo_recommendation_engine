@@ -1,0 +1,5 @@
+agent_class: SequentialAgent
+name: root_agent
+description: Root entrypoint for the SLO Recommendation Engine.
+sub_agents:
+  - code: slo_engine.agents.agent.root_agent

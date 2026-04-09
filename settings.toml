@@ -1,0 +1,155 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# settings.toml  — layered config (dynaconf)
+#
+# HOW LAYERING WORKS:
+#   1. [default]  — always loaded
+#   2. [development / staging / production]  — loaded on top of default
+#   3. .secrets.toml  — secrets (never committed)
+#   4. ENV VARS with prefix SLO_  — highest priority override
+#
+# Switch environment: ENV_FOR_DYNACONF=production  (default: development)
+# Override any key:   SLO_POSTGRES__DSN="postgresql+asyncpg://..."
+# ─────────────────────────────────────────────────────────────────────────────
+
+[default]
+
+  # ── App ──────────────────────────────────────────────────────────────────
+  [default.app]
+  name    = "SLO Recommendation Engine"
+  version = "1.0.0"
+  debug   = false
+  log_level = "INFO"
+
+  # ── API ───────────────────────────────────────────────────────────────────
+  [default.api]
+  host        = "0.0.0.0"
+  port        = 8000
+  prefix      = "/api/v1"
+  cors_origins = ["http://localhost:8501", "http://localhost:3000"]
+  jwt_algorithm      = "HS256"
+  jwt_expire_minutes = 60
+  jwt_secret         = "change-me-in-production-32chars+salt"   # overridden by SLO_API__JWT_SECRET in .env
+
+  # ── Database ──────────────────────────────────────────────────────────────
+  [default.postgres]
+  dsn          = "postgresql+asyncpg://slo_user:slo_pass@localhost:5432/slo_db"
+  pool_size    = 20
+  max_overflow = 40
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  [default.redis]
+  dsn         = "redis://localhost:6379/0"
+  ttl_seconds = 300
+
+  # ── LLM ───────────────────────────────────────────────────────────────────
+  # Default backend: Google Gemini via Google ADK (native integration).
+  # Switch by changing model — no other code changes needed:
+  #   Gemini Flash (default): "gemini-2.0-flash"
+  #   Gemini Pro:             "gemini-1.5-pro"
+  #   OpenAI (via LiteLLM):   "openai/gpt-4o-mini"
+  # GEMINI_API_KEY must be set in .env (loaded by Google ADK automatically).
+  [default.llm]
+  model            = "gemini-2.0-flash"
+  temperature      = 0.1
+  max_tokens       = 4096
+  timeout_seconds  = 120
+
+  # ── Agent ─────────────────────────────────────────────────────────────────
+  [default.agent]
+  max_iterations         = 10
+  max_retries            = 3
+  recommendation_cache_ttl = 600    # seconds
+
+  # ── Human-in-the-loop ─────────────────────────────────────────────────────
+  [default.hitl]
+  review_timeout_seconds = 3600     # 1 hour before auto-approve
+  confidence_threshold   = 0.75     # below this → require human review
+  redis_channel          = "hitl:reviews"
+
+  # ── Compute logic ─────────────────────────────────────────────────────────
+  [default.compute_logic]
+  pagerank_damping       = 0.85
+  pagerank_max_iter      = 100
+  pagerank_tol           = 1.0e-6
+  monte_carlo_samples    = 10000
+  bayesian_prior_alpha   = 1.0      # Beta(α,β) — Jeffreys: use 0.5; uniform: 1.0
+  bayesian_prior_beta    = 1.0
+  kalman_process_noise   = 1.0e-4   # Q: how fast true availability drifts
+  kalman_measurement_noise = 1.0e-3 # R: sensor noise on availability measurement
+  min_obs_window_days    = 7
+  max_obs_window_days    = 90
+
+  # ── Metrics & budgets ─────────────────────────────────────────────────────
+  [default.metrics]
+  retention_days       = 90
+  error_budget_window  = 30         # days
+
+  # ── Rate limiting ─────────────────────────────────────────────────────────
+  [default.rate_limit]
+  per_minute = 60
+  burst      = 10
+
+  # ── MCP servers ───────────────────────────────────────────────────────────
+  [default.mcp]
+  metrics_port    = 8001
+  dependency_port = 8002
+  knowledge_port  = 8003
+
+  # ── Observability ─────────────────────────────────────────────────────────
+  [default.observability]
+  otel_endpoint    = "http://localhost:4317"
+  prometheus_port  = 9090
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+[development]
+  [development.app]
+  debug     = true
+  log_level = "DEBUG"
+
+  [development.api]
+  cors_origins = ["http://localhost:8501", "http://localhost:3000", "http://localhost:8080"]
+
+  [development.compute_logic]
+  monte_carlo_samples = 1000    # faster in dev
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+[staging]
+  [staging.app]
+  log_level = "INFO"
+
+  [staging.postgres]
+  pool_size    = 10
+  max_overflow = 20
+
+  [staging.compute_logic]
+  monte_carlo_samples = 5000
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+[production]
+  [production.app]
+  debug     = false
+  log_level = "WARNING"
+
+  [production.postgres]
+  pool_size    = 30
+  max_overflow = 60
+
+  [production.redis]
+  ttl_seconds = 600
+
+  [production.agent]
+  max_retries            = 5
+  recommendation_cache_ttl = 1800   # 30 min
+
+  [production.hitl]
+  review_timeout_seconds = 7200     # 2 hours in prod
+
+  [production.rate_limit]
+  per_minute = 120
+  burst      = 20
+
+  [production.compute_logic]
+  monte_carlo_samples = 50000       # higher accuracy in prod

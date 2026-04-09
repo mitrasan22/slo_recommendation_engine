@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: slo-ui-service
+  namespace: slo-engine
+spec:
+  selector:
+    app: slo-ui
+  ports:
+    - port: 80
+      targetPort: 8501
+  type: ClusterIP

@@ -1,0 +1,37 @@
+# Secrets — NEVER commit
+.secrets.toml
+.env
+*.env
+.env.example
+data/
+docs/
+*.pdf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Local config overrides
+settings.local.toml
+
+# IDE
+.vscode/
+.idea/
+logs/
+*.jsonl
+.venv
+.claude
+*.db
+agentic_rgm/
+.hypothesis/
+
+
+
+

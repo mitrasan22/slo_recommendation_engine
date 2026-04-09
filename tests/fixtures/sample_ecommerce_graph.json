@@ -1,0 +1,71 @@
+{
+  "services": [
+    {
+      "service": "api-gateway",
+      "display_name": "API Gateway",
+      "tier": "critical",
+      "depends_on": [
+        {"name": "auth-service", "dep_type": "synchronous", "weight": 1.0},
+        {"name": "product-service", "dep_type": "synchronous", "weight": 0.8},
+        {"name": "checkout-service", "dep_type": "synchronous", "weight": 1.0}
+      ],
+      "p99_latency_ms": 250.0
+    },
+    {
+      "service": "auth-service",
+      "display_name": "Auth Service",
+      "tier": "high",
+      "depends_on": [
+        {"name": "user-db", "dep_type": "datastore", "weight": 1.0}
+      ],
+      "p99_latency_ms": 50.0
+    },
+    {
+      "service": "checkout-service",
+      "display_name": "Checkout Service",
+      "tier": "critical",
+      "depends_on": [
+        {"name": "payment-service", "dep_type": "synchronous", "weight": 1.0},
+        {"name": "inventory-service", "dep_type": "synchronous", "weight": 0.9}
+      ],
+      "p99_latency_ms": 800.0
+    },
+    {
+      "service": "payment-service",
+      "display_name": "Payment Service",
+      "tier": "critical",
+      "depends_on": [
+        {"name": "external-payment-api", "dep_type": "external", "weight": 1.0}
+      ],
+      "p99_latency_ms": 600.0
+    },
+    {
+      "service": "product-service",
+      "display_name": "Product Service",
+      "tier": "medium",
+      "depends_on": [],
+      "p99_latency_ms": 80.0
+    },
+    {
+      "service": "inventory-service",
+      "display_name": "Inventory Service",
+      "tier": "medium",
+      "depends_on": [],
+      "p99_latency_ms": 120.0
+    },
+    {
+      "service": "user-db",
+      "display_name": "User Database",
+      "tier": "high",
+      "depends_on": [],
+      "p99_latency_ms": 5.0
+    },
+    {
+      "service": "external-payment-api",
+      "display_name": "External Payment API",
+      "tier": "low",
+      "depends_on": [],
+      "p99_latency_ms": 400.0
+    }
+  ]
+}

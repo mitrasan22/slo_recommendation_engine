@@ -1,0 +1,41 @@
+production:
+  dynaconf_merge: true
+  debug: false
+
+  model:
+    model_string: "gemini-3-flash-preview"
+    temperature: 0.05
+    # GEMINI_API_KEY injected via K8s Secret slo-engine-secrets → gemini-api-key
+
+  llm:
+    model: "gemini-3-flash-preview"
+    temperature: 0.05
+    # GEMINI_API_KEY injected via K8s Secret slo-engine-secrets → gemini-api-key
+
+  postgres:
+    dsn: "postgresql+asyncpg://slo_user:slo_pass@postgres:5432/slo_db"
+    pool_size: 20
+
+  redis:
+    url: "redis://redis:6379/0"
+    ttl_seconds: 600
+
+  hitl:
+    review_timeout_seconds: 3600
+    confidence_threshold_auto_approve: 0.90
+    confidence_threshold_human_review: 0.75
+
+  rate_limit:
+    per_minute: 60
+
+  app:
+    name: "SLO Recommendation Engine"
+    version: "1.0.0"
+    debug: false
+
+  math:
+    monte_carlo_samples: 10000
+    pagerank_damping: 0.85
+    pagerank_iterations: 100
+
+  session_db_uri: "postgresql+asyncpg://slo_user:slo_pass@postgres:5432/slo_sessions"

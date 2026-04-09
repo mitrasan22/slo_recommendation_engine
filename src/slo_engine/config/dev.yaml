@@ -1,0 +1,39 @@
+dev:
+  dynaconf_merge: true
+  debug: true
+
+  model:
+    model_string: "gemini-3-flash-preview"
+    temperature: 0.1
+
+  llm:
+    model: "gemini-3-flash-preview"
+    temperature: 0.1
+
+  postgres:
+    dsn: "postgresql+asyncpg://slo_user:slo_pass@localhost:5432/slo_db"
+    pool_size: 10
+
+  redis:
+    url: "redis://localhost:6379/0"
+    ttl_seconds: 600
+
+  hitl:
+    review_timeout_seconds: 3600
+    confidence_threshold_auto_approve: 0.90
+    confidence_threshold_human_review: 0.75
+
+  rate_limit:
+    per_minute: 60
+
+  app:
+    name: "SLO Recommendation Engine"
+    version: "1.0.0"
+    debug: true
+
+  math:
+    monte_carlo_samples: 10000
+    pagerank_damping: 0.85
+    pagerank_iterations: 100
+
+  session_db_uri: "sqlite+aiosqlite:///./slo_sessions.db"

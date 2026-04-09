@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: chromadb-pvc
+  namespace: slo-engine
+  labels:
+    app: chromadb
+spec:
+  accessModes:
+    - ReadWriteOnce        # single ChromaDB server pod owns the volume
+  resources:
+    requests:
+      storage: 10Gi        # ~205 docs today; headroom for corpus growth

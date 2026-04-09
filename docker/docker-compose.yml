@@ -1,0 +1,80 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: slo_user
+      POSTGRES_PASSWORD: slo_pass
+      POSTGRES_DB: slo_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U slo_user -d slo_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_DSN: postgresql+asyncpg://slo_user:slo_pass@postgres:5432/slo_db
+      REDIS_DSN: redis://redis:6379/0
+      LLM_MODEL: gemini-3-flash-preview
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      ENVIRONMENT: development
+      DEBUG: "false"
+      JWT_SECRET: change-me-in-production-32chars+salt
+      CHROMA_PATH: /data/chromadb
+    volumes:
+      - chromadb_data:/data/chromadb
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ui:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ui
+    ports:
+      - "8501:8501"
+    environment:
+      API_BASE_URL: http://api:8000/api/v1
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+volumes:
+  postgres_data:
+  chromadb_data:

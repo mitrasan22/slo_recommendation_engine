@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slo-api
+  namespace: slo-engine
+  labels:
+    app: slo-api
+    version: "1.0.0"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: slo-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: slo-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8000"
+    spec:
+      containers:
+        - name: slo-api
+          image: slo-engine/api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: POSTGRES_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: slo-engine-secrets
+                  key: postgres-dsn
+            - name: REDIS_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: slo-engine-secrets
+                  key: redis-dsn
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: slo-engine-secrets
+                  key: jwt-secret
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: slo-engine-secrets
+                  key: gemini-api-key
+            - name: LLM_MODEL
+              value: "gemini-3-flash-preview"
+            - name: ENVIRONMENT
+              value: "production"
+            - name: CHROMA_HOST
+              value: "chromadb-service"
+            - name: CHROMA_PORT
+              value: "8000"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: [slo-api]
+                topologyKey: kubernetes.io/hostname
