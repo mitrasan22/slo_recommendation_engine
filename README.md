@@ -623,10 +623,6 @@ Relevant files:
 
 Because the codebase treats numeric recommendation logic as deterministic infrastructure. This keeps outputs testable, reproducible, and cheap.
 
-### Why Google ADK?
-
-Because the repo uses ADK sessions, ADK agents, and ADK app serving directly. The pipeline, UI session-resume flow, and `/run` integration are all built around ADK.
-
 ### How does the engine minimize LLM token usage?
 
 By keeping:
@@ -655,7 +651,7 @@ Because the system is designed to auto-approve only safe cases and route drifted
 
 Because the knowledge boundary benefits from being an independent retrieval tool surface. Metrics and dependency computation already live cleanly as direct deterministic Python tools in this codebase.
 
-### Does RAG still happen through the Knowledge MCP server?
+### How does RAG Happen?
 
 Yes. The recommendation orchestrator calls the shared MCP client, which calls the Knowledge MCP server, which calls `KnowledgeStore.retrieve(...)`, which performs Chroma retrieval and MMR reranking.
 
