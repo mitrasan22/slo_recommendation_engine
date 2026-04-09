@@ -1,15 +1,18 @@
-# SLO Recommendation Engine — Makefile
-.PHONY: help install dev build up down test lint fmt pull-model k8s-deploy k8s-teardown clean
+# SLO Recommendation Engine Makefile
+
+.PHONY: help install dev dev-ui build up down logs test test-math test-api lint fmt \
+	k8s-namespace k8s-secrets k8s-deploy k8s-status k8s-teardown \
+	mcp-metrics mcp-dependency mcp-knowledge migrate migrate-new demo clean show-model
 
 DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml
-K8S_NAMESPACE   = slo-engine
-IMAGE_TAG       = latest
-OLLAMA_MODEL    = mistral
+K8S_NAMESPACE = slo-engine
+IMAGE_TAG = latest
+DEFAULT_MODEL = gemini-3-flash-preview
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# ── Development ────────────────────────────────────────────────────────────────
+# Development
 install: ## Install Python dependencies
 	pip install -r requirements.txt
 
@@ -19,12 +22,11 @@ dev: ## Run API in dev mode (hot reload)
 dev-ui: ## Run Streamlit UI in dev mode
 	streamlit run ui/ui.py --server.port 8501
 
-# ── Ollama ─────────────────────────────────────────────────────────────────────
-pull-model: ## Pull Ollama model (default: mistral)
-	ollama pull $(OLLAMA_MODEL)
-	@echo "Model $(OLLAMA_MODEL) ready"
+show-model: ## Show the default app model configured for local/dev use
+	@echo "Default model: $(DEFAULT_MODEL)"
+	@echo "Configured env files use Gemini via native ADK, not Ollama."
 
-# ── Docker ─────────────────────────────────────────────────────────────────────
+# Docker
 build: ## Build all Docker images
 	$(DOCKER_COMPOSE) build --no-cache
 
@@ -41,7 +43,7 @@ down: ## Stop all services
 logs: ## Follow API logs
 	$(DOCKER_COMPOSE) logs -f api
 
-# ── Testing ────────────────────────────────────────────────────────────────────
+# Testing
 test: ## Run test suite
 	PYTHONPATH=src pytest tests/ -v --cov=src/slo_engine --cov-report=term-missing
 
@@ -51,7 +53,7 @@ test-math: ## Run math engine tests only
 test-api: ## Run API integration tests
 	PYTHONPATH=src pytest tests/test_api.py -v
 
-# ── Code quality ───────────────────────────────────────────────────────────────
+# Code quality
 lint: ## Lint with ruff
 	ruff check src/ api/ ui/
 	mypy src/slo_engine --ignore-missing-imports
@@ -60,7 +62,7 @@ fmt: ## Format with black + ruff
 	black src/ api/ ui/
 	ruff check --fix src/ api/ ui/
 
-# ── Kubernetes ─────────────────────────────────────────────────────────────────
+# Kubernetes
 k8s-namespace: ## Create K8s namespace
 	kubectl create namespace $(K8S_NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
 
@@ -86,7 +88,7 @@ k8s-status: ## Check K8s deployment status
 k8s-teardown: ## Remove all K8s resources
 	kubectl delete namespace $(K8S_NAMESPACE)
 
-# ── MCP Servers ────────────────────────────────────────────────────────────────
+# MCP servers
 mcp-metrics: ## Start metrics MCP server
 	PYTHONPATH=src python -m slo_engine.mcp.metrics_mcp_server
 
@@ -96,14 +98,14 @@ mcp-dependency: ## Start dependency MCP server
 mcp-knowledge: ## Start knowledge MCP server
 	PYTHONPATH=src python -m slo_engine.mcp.knowledge_mcp_server
 
-# ── DB Migrations ──────────────────────────────────────────────────────────────
+# DB migrations
 migrate: ## Run Alembic migrations
 	PYTHONPATH=src alembic upgrade head
 
 migrate-new: ## Create new migration
 	PYTHONPATH=src alembic revision --autogenerate -m "$(MSG)"
 
-# ── Demo ───────────────────────────────────────────────────────────────────────
+# Demo
 demo: ## Run demo: ingest sample graph + get recommendations
 	@echo "Ingesting sample e-commerce graph..."
 	curl -s -X POST http://localhost:8000/api/v1/services/dependencies \
@@ -112,7 +114,7 @@ demo: ## Run demo: ingest sample graph + get recommendations
 	@echo "\nGetting recommendations for checkout-service..."
 	curl -s http://localhost:8000/api/v1/services/checkout-service/slo-recommendations | python -m json.tool
 
-# ── Cleanup ────────────────────────────────────────────────────────────────────
+# Cleanup
 clean: ## Remove build artifacts and caches
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -delete 2>/dev/null || true
