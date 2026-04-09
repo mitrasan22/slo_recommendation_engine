@@ -39,20 +39,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.14
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install ruff mypy
 
       - name: Lint (ruff)
-        run: ruff check src/ api/ tests/
+        run: python -m ruff check src/ api/ tests/
 
       - name: Type check (mypy)
-        run: mypy src/slo_engine/ --ignore-missing-imports --no-error-summary
+        run: python -m mypy src/slo_engine/ --ignore-missing-imports --no-error-summary
         continue-on-error: true   # informational — does not block merge
 
       - name: Run tests
@@ -60,7 +62,7 @@ jobs:
           POSTGRES_DSN: postgresql+asyncpg://slo_user:slo_pass@localhost:5432/slo_db
           REDIS_DSN: redis://localhost:6379/0
           ENVIRONMENT: test
-        run: pytest tests/ -v --tb=short -q
+        run: python -m pytest tests/ -v --tb=short -q
 
   # ── Build & Push Docker images ─────────────────────────────────────────────
   build:
