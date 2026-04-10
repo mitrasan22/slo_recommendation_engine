@@ -586,9 +586,11 @@ Alternative providers can still be selected via `LLM_MODEL`:
 ### Quick Start
 
 ```bash
-git clone <repo>
+git clone https://github.com/mitrasan22/slo_recommendation_engine
 cd slo_recommendation_engine
 copy .env.example .env
+pip install -r requirements.txt
+pip install .
 ```
 
 Then set:
