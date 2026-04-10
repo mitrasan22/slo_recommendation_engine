@@ -274,6 +274,12 @@ ADK app endpoints:
 - `POST /apps/slo_pipeline/users/{user_id}/sessions`
 - `POST /run`
 
+### API Error Contract
+
+The API layer uses **RFC 7807 Problem Details** for request-validation failures and unhandled exceptions. Those responses are emitted as `application/problem+json` and include the standard problem fields plus a `trace_id` so platform consumers can correlate an error response with backend logs and traces.
+
+This was added because the system is intended to integrate with an internal developer platform rather than only a single custom UI. A standard error format makes plugin integration, troubleshooting, and operational automation much easier than returning different ad hoc error payloads from different endpoints.
+
 ### Integration with Developer Platform
 
 The system is platform-agnostic. Integration happens through:
@@ -895,6 +901,30 @@ For the current repo and working demo, these assumptions are reasonable because:
 - the knowledge MCP server is local-to-worker rather than a separately managed network service
 - the hybrid method was chosen because it gives a better accuracy/latency/cost balance than either pure rules or pure LLM reasoning
 - engineering effort is invested first in deterministic graph/math/retrieval correctness and safe review loops, and later in higher-scale retrieval/service decomposition
+
+### Future Enhancements
+
+The most important next enhancements are the ones that reduce duplication, make the architecture more internally consistent, and improve operational maturity without changing the core design.
+
+- Consolidate impact analysis into a single dependency-impact engine. The current codebase has two related paths: `POST /api/v1/slos/impact-analysis` computes feasibility and cascade effects inline in the API route, while `compute_dependency_impact(...)` exists in the dependency tool layer but is not yet wired into the exposed API path. A better next step is to converge both into one shared subsystem so feasibility, upstream/downstream propagation, blast radius, and critical-path effects are calculated from one consistent model.
+
+- Expand impact analysis from point feasibility into contract-aware propagation. Right now impact is mostly understood as “is the target SLO feasible?” and “how do direct upstream services get constrained?” A stronger future model would combine propagated availability ceilings, latency pressure on critical paths, cycle or async-edge effects, and structural criticality so the result is useful for platform-level contract decisions rather than just endpoint-level validation.
+
+- Strengthen final report contracts and validation. Planner-style agents already behave like structured-output components, but dict-heavy report stages still depend on prompt-constrained JSON plus local parsing. Refactoring those report payloads into stricter explicit response shapes would improve runtime robustness, reduce parser cleanup in orchestrators and UI, and make API compatibility easier to preserve over time.
+
+- Reduce interactive clarification through pre-enrichment. `AWAIT_INPUT` is a useful safety mechanism, but too much runtime questioning becomes operational friction when the platform matures. A natural next step is to pre-enrich graph inputs with tiers, external dependency defaults, latency baselines, and datastore or infrastructure metadata so more runs complete without manual interruption.
+
+- Evolve the retrieval tier when throughput grows. The current MCP model is intentionally simple and correct for moderate scale: each API worker owns a stdio `knowledge_mcp_server` subprocess, and retrieval state is shared through ChromaDB. If retrieval QPS, corpus size, or operational isolation needs increase, the next architecture should split retrieval into a standalone tier so API scaling and retrieval scaling can evolve independently.
+
+- Strengthen ChromaDB as a production retrieval backend. The repo already contains production-style Chroma deployment, service, and PVC manifests, which means ChromaDB is a real runtime dependency rather than only a dev convenience. Useful next work here includes explicit backup and restore procedures, re-indexing jobs, collection/version migration strategy, deeper health checks, and retrieval benchmarking under concurrent API load.
+
+- Add shadow-mode recommendation comparison. The current design is already well-suited to shadow mode because recommendations are logged and review outcomes are captured. A strong next step is to run alternative recommendation policies, prompts, or retrieval strategies in parallel and compare acceptance rate, review overrides, incident correlation, and budget-burn alignment before promoting changes.
+
+- Turn review outcomes into a feedback dataset. The review queue is already a governance mechanism, and it can become a learning mechanism without changing the safety model. Review decisions can be used to identify commonly modified recommendations, tune default assumptions, calibrate confidence thresholds, and improve prompts or heuristics with evidence from real operator behavior.
+
+- Prepare for safe platform write-back. If the system eventually moves from advisory recommendations to auto-applied SLO updates, it will need a policy engine, approval workflows, write-back adapters, rollback support, and stronger authorization boundaries. That work should remain a later enhancement because it depends on trust in the recommendation quality and governance loop first.
+
+- Improve tenant and region isolation. The current design is a good fit for a moderate shared deployment, but a broader internal-platform rollout would need stronger partitioning by tenant and region. That would include isolating graph state, recommendation history, retrieval corpora, and freshness guarantees so the platform can support multiple environments or business units cleanly.
 
 ### Out of Scope
 

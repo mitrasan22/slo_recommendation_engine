@@ -13,14 +13,17 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from slo_engine.agents.dependency_agent.tools.tools import (
     analyse_dependency_graph,
     ingest_service_dependencies,
 )
-from slo_engine.agents.metrics_agent.tools.tools import query_service_metrics
+from slo_engine.agents.metrics_agent.tools.tools import (
+    compute_error_budget_status,
+    query_service_metrics,
+)
 from slo_engine.agents.recommendation_agent.tools.tools import (
     check_slo_feasibility,
     generate_slo_recommendation,
@@ -87,7 +90,11 @@ class ImpactAnalysisBody(BaseModel):
     "/services/{service_id}/slo-recommendations",
     summary="Get SLO recommendations for a service",
 )
-async def get_slo_recommendations(service_id: str) -> dict:
+async def get_slo_recommendations(
+    service_id: str,
+    slo_target: float = Query(default=0.999, ge=0.9, le=0.99999),
+    window_days: int = Query(default=30, ge=7, le=90),
+) -> dict:
     """
     Run a single-service SLO recommendation using direct tool-layer calls.
 
@@ -110,11 +117,20 @@ async def get_slo_recommendations(service_id: str) -> dict:
     """
     metrics_raw = query_service_metrics(json.dumps({
         "service_name": service_id,
-        "window_days": 30,
+        "window_days": window_days,
     }))
     metrics = json.loads(metrics_raw)
     if metrics.get("status") == "error":
         raise HTTPException(status_code=500, detail=metrics["message"])
+
+    budget_raw = compute_error_budget_status(json.dumps({
+        "service_name": service_id,
+        "slo_target": slo_target,
+        "window_days": window_days,
+    }))
+    budget = json.loads(budget_raw)
+    if budget.get("status") == "error":
+        raise HTTPException(status_code=500, detail=budget["message"])
 
     knowledge_raw = retrieve_knowledge_for_slo(json.dumps({
         "service_name": service_id,
@@ -143,6 +159,7 @@ async def get_slo_recommendations(service_id: str) -> dict:
         "service": service_id,
         "recommendation": rec,
         "metrics_summary": metrics,
+        "budget_summary": budget,
     }
 
 

@@ -15,7 +15,7 @@ recommendation pipeline. Pages:
       handling. Supports session resume when the pipeline pauses to ask
       questions about tier assignment or cycle resolution.
   Fast Recommendations
-      Math-only pipeline (no LLM) with Bayesian + MILP — instant results.
+      Computation-only pipeline (no LLM) with Bayesian + MILP — instant results.
   Error Budgets
       Real-time gauge charts per service with multi-window burn rate lines.
   Human Review
@@ -488,7 +488,7 @@ SAMPLE_GRAPH = {
 
 with st.sidebar:
     st.title("SLO Engine")
-    st.caption("Powered by Google ADK + Gemini")
+    st.caption("Powered by Agents")
     page = st.radio(
         "Navigation",
         ["Dashboard", "Ingest Graph", "Agent Pipeline", "Fast Recommendations", "Error Budgets", "Human Review"],
@@ -951,7 +951,7 @@ elif page == "Fast Recommendations":
             "focus_service": None if focus == "All Services" else focus,
             "window_days": window,
         }
-        with st.spinner("Running math pipeline..."):
+        with st.spinner("Running computation pipeline..."):
             result = api_post("/recommendations/bulk", payload, timeout=120)
 
         if result:
@@ -1025,21 +1025,24 @@ elif page == "Error Budgets":
     cols = st.columns(min(len(selected), 4))
 
     for col, svc in zip(cols, selected):
-        rec_resp = api_get(f"/services/{svc}/slo-recommendations")
+        rec_resp = api_get(f"/services/{svc}/slo-recommendations?slo_target={slo_target:.4f}")
         if rec_resp and isinstance(rec_resp, dict):
             m = rec_resp.get("metrics_summary", {})
-            burn_1h  = m.get("burn_rate_1h", 1.0)
-            burn_6h  = m.get("burn_rate_6h", 1.0)
-            posterior = m.get("posterior_mean", 0.999)
-            error_rate = 1 - posterior
-            burn_frac  = min(error_rate / max(1 - slo_target, 1e-6) * 0.03, 1.0)
+            b = rec_resp.get("budget_summary", {})
+            burn_1h = m.get("burn_rate_1h", 1.0)
+            burn_6h = m.get("burn_rate_6h", 1.0)
+            burn_frac = float(b.get("burn_fraction", 0.0))
+            status = str(b.get("status", "healthy"))
+            days_to_exhaustion = b.get("days_to_exhaustion")
+            prob_exhaust = b.get("prob_exhaust_in_window")
         else:
             import random; random.seed(hash(svc) % 100)
-            burn_1h  = round(random.uniform(0.3, 8.0), 2)
-            burn_6h  = round(random.uniform(0.3, 6.0), 2)
+            burn_1h = round(random.uniform(0.3, 8.0), 2)
+            burn_6h = round(random.uniform(0.3, 6.0), 2)
             burn_frac = min(burn_1h / 14.4, 1.0)
-
-        status = "critical" if burn_frac > 0.80 else "warning" if burn_frac > 0.50 else "healthy"
+            status = "critical" if burn_frac > 0.80 else "warning" if burn_frac > 0.50 else "healthy"
+            days_to_exhaustion = None
+            prob_exhaust = None
         with col:
             st.subheader(svc[:20])
             fig = go.Figure(go.Indicator(
@@ -1063,12 +1066,17 @@ elif page == "Error Budgets":
             fig.update_layout(height=250, margin=dict(l=10, r=10, t=40, b=10))
             st.plotly_chart(fig, use_container_width=True, key=f"gauge_{svc}")
             st.caption(f"Burn 1h: **{burn_1h:.2f}x** · 6h: **{burn_6h:.2f}x**")
+            if days_to_exhaustion is not None and prob_exhaust is not None:
+                st.caption(
+                    f"Status: **{status}** · Days to exhaustion: **{days_to_exhaustion}** "
+                    f"· P(exhaust): **{float(prob_exhaust):.1%}**"
+                )
 
     st.divider()
     st.subheader("Multi-Window Burn Rate — SRE Alert Thresholds")
     burn_data_rows = []
     for svc in selected:
-        rec_resp = api_get(f"/services/{svc}/slo-recommendations")
+        rec_resp = api_get(f"/services/{svc}/slo-recommendations?slo_target={slo_target:.4f}")
         if rec_resp and isinstance(rec_resp, dict):
             m = rec_resp.get("metrics_summary", {})
             for window_label, val_key in [("1h", "burn_rate_1h"), ("6h", "burn_rate_6h")]:

@@ -357,7 +357,22 @@ It checks:
 
 This is separate from the ADK multi-agent pipeline and runs through direct tool-layer logic.
 
-## Mathematics
+## Future Enhancements
+
+The current system is working end-to-end, but there are a few clear next improvements already suggested by the codebase and deployment model.
+
+- Unify dependency impact analysis behind one shared engine. Today, `POST /api/v1/slos/impact-analysis` computes cascade effects inline in the API route, while `compute_dependency_impact(...)` exists in the dependency tool layer but is not yet wired into the exposed path. A good next step is to consolidate both into one canonical dependency-impact subsystem so feasibility, upstream/downstream propagation, blast radius, and critical-path effects all come from one model.
+- Expand impact analysis into a fuller service-contract view. Right now impact is mostly expressed as feasibility plus upstream availability tightening, which is useful but incomplete. The next version should combine feasibility impact, propagated availability ceilings, latency propagation, critical-path contribution, and structural risk in a single response so engineers can reason about contract changes more clearly.
+- Strengthen final report contracts and validation. Planner-style agents already return structured outputs where appropriate, but dict-heavy report stages still rely on prompt-constrained JSON plus local parsing. Refactoring those report payloads into stricter explicit response shapes would improve robustness, reduce parser cleanup, and make downstream UI/API handling more reliable.
+- Pre-enrich graphs before runtime. More catalog synchronization and metadata hydration would reduce `AWAIT_INPUT` pauses for missing latency, missing external SLA assumptions, and missing tier data. This would make the system feel less interactive for mature services and more automatic for repeated runs.
+- Promote retrieval into a standalone service if scale demands it. The current worker-local MCP subprocess model is simple and correct for moderate scale, which is why it is the right default today. If retrieval traffic or corpus size grows materially, the knowledge boundary can move into a separately scaled retrieval tier while keeping the same logical MCP interface.
+- Strengthen ChromaDB production operations. ChromaDB is currently a shared internal service with persistent storage and a single-replica deployment model, which is fine for the current scale target. Future production work could add clearer backup and reindex procedures, deeper health checks, performance tuning, and possibly a higher-scale retrieval backend if corpus size or QPS grows significantly.
+- Add shadow-mode recommendation comparison. A practical next step is to run alternative recommendation policies, retrieval strategies, or prompts in shadow mode without changing the active production output. That would let the team compare acceptance rate, review overrides, and incident correlation before promoting changes.
+- Learn from human review outcomes. Review decisions already capture where operators agree, modify, or reject recommendations, which makes them a valuable feedback signal. Those outcomes can be used to improve prompts, fallback heuristics, confidence thresholds, and default assumptions without turning the system into an opaque self-learning loop.
+- Add stronger write-back controls for automated adoption. If the platform later wants recommendations to be auto-applied, the system should gain a policy engine, explicit approval rules, rollback controls, and tighter authorization boundaries. That work belongs after recommendation quality and governance are stable, not before.
+- Improve multi-tenant and multi-region operating modes. The current architecture is a good fit for a moderate shared deployment, but a broader platform rollout would need clearer partitioning by tenant and region. That would include stronger isolation for graph state, recommendation history, retrieval corpora, and freshness guarantees across environments.
+
+## Computation
 
 The codebase keeps the core computation outside the LLM.
 
@@ -415,85 +430,99 @@ Supported catalog normalization paths:
 
 ## Project Structure
 
-The repo is organized by runtime boundary and responsibility.
+The repo is organized by runtime boundary. The tree below shows the important files and what each one is responsible for.
 
-### Serving Layer
-
-- `api/main.py`
-  FastAPI app creation, middleware, router registration, and ADK app exposure.
-- `api/routes/`
-  Public REST contracts split by domain:
-  `services.py`, `recommendations.py`, `slos.py`, `reviews.py`, `integrations.py`, `health.py`.
-- `api/middleware/`
-  Request-level behavior such as rate limiting.
-
-### Core Application Package
-
-- `src/slo_engine/`
-  Main application package.
-- `src/slo_engine/config/`
-  Runtime config, settings resolution, and environment-specific YAML files.
-- `src/slo_engine/core/`
-  Shared app primitives such as the agent registry.
-- `src/slo_engine/db/`
-  Database setup and ORM models.
-- `src/slo_engine/integrations/`
-  Catalog adapters, metrics adapters, and webhook integration logic.
-- `src/slo_engine/observability/`
-  Tracing and recommendation audit integration.
-- `src/slo_engine/review_store.py`
-  Human-review queue and review decision state.
-- `src/slo_engine/utils/`
-  Utility helpers such as PII scrubbing.
-
-### Agent Layer
-
-- `src/slo_engine/agents/agent.py`
-  Root router, stage orchestration, and inline confidence gate.
-- `src/slo_engine/agents/base.py`
-  Shared ADK agent abstraction and model resolution.
-- `src/slo_engine/agents/llm_manager.py`
-  Native Gemini default path plus LiteLLM-backed alternative registration.
-- `src/slo_engine/agents/dependency_agent/`
-  Dependency planner/orchestrator, prompts, schemas, and tools.
-- `src/slo_engine/agents/metrics_agent/`
-  Metrics orchestration, prompts, schemas, and tools.
-- `src/slo_engine/agents/recommendation_agent/`
-  Recommendation orchestration, report synthesis, schemas, prompts, and computation tools.
-- `src/slo_engine/agents/slo_pipeline/`
-  ADK application entry point exported as `slo_pipeline`.
-
-### MCP and RAG Layer
-
-- `src/slo_engine/mcp/client.py`
-  Shared persistent MCP client used by the recommendation stage.
-- `src/slo_engine/mcp/knowledge_mcp_server.py`
-  Stdio MCP tool server for knowledge retrieval.
-- `src/slo_engine/rag/knowledge_store.py`
-  Chroma-backed retrieval and adaptive MMR reranking.
-
-### User-Facing and Validation Assets
-
-- `ui/ui.py`
-  Streamlit UI for ingest, pipeline execution, result display, and review flows.
-- `scripts/e2e_run.py`
-  Working end-to-end flow and best reference payload for graph ingest.
-- `tests/`
-  API, agent, knowledge-store, and property-style tests.
-
-### Deployment Assets
-
-- `docker/`
-  Local multi-service stack:
-  API, UI, PostgreSQL, Redis, Prometheus.
-- `k8s/api/`
-  API deployment, service, ingress.
-- `k8s/ui/`
-  UI deployment, service, ingress.
-- `k8s/db/`
-  PostgreSQL and Redis manifests.
-- `k8s/chromadb/`
-  Chroma deployment, service, and PVC.
+```text
+slo_recommendation_engine/
+├── api/
+│   ├── main.py                        # FastAPI app, middleware wiring, ADK app exposure
+│   ├── middleware/
+│   │   └── rate_limit.py             # API rate limiting and request throttling
+│   └── routes/
+│       ├── services.py               # Service catalog, graph ingest, graph read APIs
+│       ├── recommendations.py        # Direct compute recommendation APIs and impact analysis
+│       ├── slos.py                   # Persisted SLO CRUD-style endpoints
+│       ├── reviews.py                # Human review queue and review decision APIs
+│       ├── integrations.py           # Catalog ingest, webhook registration, platform integration endpoints
+│       └── health.py                 # Health and readiness style endpoints
+├── src/
+│   └── slo_engine/
+│       ├── agents/
+│       │   ├── agent.py              # Root router, full pipeline orchestration, inline confidence gate
+│       │   ├── base.py               # Shared ADK agent abstraction, model resolution, output handling
+│       │   ├── llm_manager.py        # Native Gemini default path and alternative provider registration
+│       │   ├── prompt.py             # Shared top-level prompt text
+│       │   ├── dependency_agent/
+│       │   │   ├── agent.py          # Dependency workflow: planner, ingest, cycles, report
+│       │   │   ├── prompt.py         # Dependency planner/report prompts
+│       │   │   ├── schema.py         # Dependency workflow state and output schemas
+│       │   │   └── tools/
+│       │   │       ├── tools.py      # Graph ingest, PageRank, cycle detection, critical path, blast radius
+│       │   │       └── schema.py     # Tool input/output schemas for dependency math
+│       │   ├── metrics_agent/
+│       │   │   ├── agent.py          # Metrics workflow: query, anomaly, budget, report
+│       │   │   ├── prompt.py         # Metrics prompts and report instructions
+│       │   │   ├── schema.py         # Metrics workflow state and report schemas
+│       │   │   └── tools/
+│       │   │       ├── tools.py      # Bayesian metrics, anomaly logic, error budget computation
+│       │   │       └── schema.py     # Tool input/output schemas for metrics math
+│       │   ├── recommendation_agent/
+│       │   │   ├── agent.py          # Recommendation workflow: generate, feasibility, optimize, report
+│       │   │   ├── prompt.py         # Final report synthesis prompts
+│       │   │   ├── schema.py         # Recommendation workflow and final report schemas
+│       │   │   └── tools/
+│       │   │       ├── tools.py      # SLO generation, feasibility, optimization, knowledge retrieval helpers
+│       │   │       └── schema.py     # Tool input/output schemas for recommendation math
+│       │   └── slo_pipeline/
+│       │       └── agent.py          # ADK application entry point exported as slo_pipeline
+│       ├── config/
+│       │   ├── settings.py           # Pydantic settings and runtime config resolution
+│       │   ├── config.py             # Config helpers / structured config models
+│       │   ├── dev.yaml              # Development defaults
+│       │   └── prod.yaml             # Production defaults
+│       ├── core/
+│       │   └── agent_registry.py     # Shared registry for agent instances
+│       ├── db/
+│       │   ├── database.py           # SQLAlchemy engine and session setup
+│       │   └── models.py             # ORM models for services, SLOs, reviews, integrations
+│       ├── integrations/
+│       │   ├── catalog_adapter.py    # Backstage / Port / Cortex / generic catalog normalization
+│       │   ├── metrics_adapter.py    # Metrics-source adapter abstraction and mock adapter
+│       │   └── webhook_sink.py       # Outbound webhook delivery
+│       ├── mcp/
+│       │   ├── client.py             # Shared MCP client used by recommendation stage
+│       │   └── knowledge_mcp_server.py # Stdio MCP tool server for knowledge retrieval
+│       ├── rag/
+│       │   └── knowledge_store.py    # Chroma-backed retrieval and adaptive MMR reranking
+│       ├── observability/
+│       │   └── opik_tracer.py        # Opik tracing and recommendation audit logging
+│       ├── utils/
+│       │   └── pii_scrubber.py       # PII scrubbing helpers for logs / outputs
+│       └── review_store.py           # Review queue persistence and review decision helpers
+├── ui/
+│   └── ui.py                         # Streamlit app for graph ingest, pipeline runs, error budgets, review UI
+├── scripts/
+│   └── e2e_run.py                    # Working end-to-end sample flow and best ingest example
+├── tests/                            # API, agent, RAG, and property-style tests
+├── data/
+│   └── knowledge_base/               # JSON knowledge corpus used by the retrieval layer
+├── docs/                             # Markdown knowledge docs and reference guidance
+|
+├── docker/
+│   └── docker-compose.yml            # Local multi-service stack: API, UI, DB, Redis, monitoring
+├── k8s/
+│   ├── api/                          # API deployment, service, ingress
+│   ├── ui/                           # UI deployment, service, ingress
+│   ├── db/                           # PostgreSQL and Redis manifests
+│   └── chromadb/                     # Chroma deployment, service, PVC
+├── .github/
+│   └── workflows/ci.yml              # CI pipeline for lint, typing, and tests
+├── README.md                         # Project overview, setup, architecture, API guide
+├── DESIGN_NOTES.md                   # Deeper architecture and design rationale
+├── Makefile                          # Local dev, test, MCP, and deployment shortcuts
+├── settings.toml                     # Alternate local config source / examples
+└── pyproject.toml                    # Python packaging, Ruff, Black, and MyPy configuration
+```
 
 ## API Contract
 
@@ -520,6 +549,21 @@ Main REST routes:
 ADK app endpoints:
 - `POST /apps/slo_pipeline/users/{user_id}/sessions`
 - `POST /run`
+
+### Error Response Format
+
+The FastAPI layer uses **RFC 7807 Problem Details** for validation and unhandled error responses. In practice, this means API errors are returned as `application/problem+json` with fields such as:
+- `type`
+- `title`
+- `status`
+- `detail`
+- `instance`
+- `trace_id`
+
+Why this is used:
+- it gives the internal developer platform a standard machine-readable error contract instead of ad hoc JSON error shapes
+- it makes API failures easier to debug in UI, platform plugins, and automation because every error includes the request instance and trace context
+- it aligns cleanly with the W3C trace propagation already used in `api/main.py`, so a failed request can be correlated with backend logs and Opik traces
 
 ## Setup and Run
 
@@ -563,6 +607,8 @@ LLM_MODEL=gemini-3-flash-preview
 ### Local Development
 
 ```bash
+cd docker
+docker-compose up -d postgres redis
 python -m compileall src ui\ui.py
 python api/main.py
 streamlit run ui/ui.py
