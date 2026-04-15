@@ -491,7 +491,7 @@ with st.sidebar:
     st.caption("Powered by Agents")
     page = st.radio(
         "Navigation",
-        ["Dashboard", "Ingest Graph", "Agent Pipeline", "Fast Recommendations", "Error Budgets", "Human Review"],
+        ["Dashboard", "Ingest Graph", "Agent Pipeline", "Fast Recommendations", "Impact Analysis", "Error Budgets", "Human Review"],
         index=0,
     )
     st.divider()
@@ -1004,6 +1004,108 @@ elif page == "Fast Recommendations":
                               title="MILP-Optimal SLO Targets",
                               range_y=[0.98, 1.001])
                 st.plotly_chart(fig2, use_container_width=True)
+
+
+elif page == "Impact Analysis":
+    st.title("Impact Analysis")
+    st.caption(
+        "Tests how a proposed service SLO change affects feasibility and upstream services. "
+        "This page calls the backend `POST /api/v1/slos/impact-analysis` endpoint directly."
+    )
+
+    live_services = api_get("/services") or []
+    svc_names = [s["name"] for s in live_services] if live_services else [
+        "api-gateway", "checkout-service", "auth-service", "payment-service"
+    ]
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        service_name = st.selectbox("Service", svc_names, index=0)
+    with c2:
+        proposed_availability = st.slider(
+            "Proposed Availability",
+            min_value=0.9000,
+            max_value=0.9999,
+            value=0.9950,
+            step=0.0001,
+            format="%.4f",
+        )
+    with c3:
+        proposed_latency = st.number_input(
+            "Proposed p99 Latency (ms)",
+            min_value=10.0,
+            max_value=10000.0,
+            value=500.0,
+            step=10.0,
+        )
+
+    if st.button("Run Impact Analysis", type="primary"):
+        payload = {
+            "service_name": service_name,
+            "proposed_availability": proposed_availability,
+            "proposed_latency_p99_ms": proposed_latency,
+        }
+        with st.spinner("Computing impact analysis..."):
+            result = api_post("/slos/impact-analysis", payload, timeout=60)
+
+        if result and isinstance(result, dict):
+            st.success(f"Impact analysis complete for **{service_name}**")
+
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Feasible", "Yes" if result.get("feasible") else "No")
+            m2.metric("Feasibility Score", f"{float(result.get('feasibility_score', 0.0)):.1%}")
+            ceiling = result.get("availability_ceiling")
+            m3.metric("Availability Ceiling", f"{float(ceiling):.4f}" if ceiling is not None else "-")
+            hist = result.get("historical_availability")
+            m4.metric("Historical Availability", f"{float(hist):.4f}" if hist is not None else "-")
+
+            blocking = result.get("blocking_reason", [])
+            if blocking:
+                st.warning("Blocking reasons: " + "; ".join(str(x) for x in blocking))
+
+            c_left, c_right = st.columns(2)
+            with c_left:
+                st.subheader("Dependency Context")
+                st.write("Sync dependencies:", result.get("sync_dependencies", []))
+                st.write("Upstream affected:", result.get("upstream_affected", []))
+
+                dep_avails = result.get("dep_availabilities", {})
+                if dep_avails:
+                    dep_df = pd.DataFrame([
+                        {"Dependency": k, "Historical Availability": v}
+                        for k, v in dep_avails.items()
+                    ])
+                    st.dataframe(dep_df, use_container_width=True)
+
+            with c_right:
+                st.subheader("Cascade Impact")
+                cascade = result.get("cascade", {})
+                if cascade:
+                    cascade_df = pd.DataFrame([
+                        {
+                            "Upstream Service": upstream,
+                            "Current Availability": details.get("current_availability"),
+                            "New Ceiling": details.get("new_availability_ceiling"),
+                            "Impact": details.get("impact"),
+                        }
+                        for upstream, details in cascade.items()
+                    ])
+                    st.dataframe(cascade_df, use_container_width=True)
+
+                    fig = px.bar(
+                        cascade_df,
+                        x="Upstream Service",
+                        y="New Ceiling",
+                        color="Impact",
+                        title="Upstream Availability Ceilings After Proposed Change",
+                        range_y=[0.90, 1.0],
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("No upstream cascade impact detected for this service.")
+
+            with st.expander("Full impact-analysis JSON"):
+                st.json(result)
 
 
 elif page == "Error Budgets":
