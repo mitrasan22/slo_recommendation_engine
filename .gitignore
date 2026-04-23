@@ -29,7 +29,6 @@ logs/
 .venv
 .claude
 *.db
-agentic_rgm/
 .hypothesis/
 
 
